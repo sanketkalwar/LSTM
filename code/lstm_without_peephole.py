@@ -2,8 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 plt.ion()
-# dataset = open('../data/input.txt','r').read()
-dataset = open('../data/code.txt','r').read()
+dataset = open('../data/input.txt','r').read()
+#dataset = open('../data/code.txt','r').read()
 len_of_dataset = len(dataset)
 print('len of dataset:',len_of_dataset)
 
