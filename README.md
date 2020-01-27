@@ -4,12 +4,15 @@ The task is to predict next character in the sequence using sequential model lik
 
 ## How to run the code:
 ```
-python code/lstm_without_peephole.py	
+#To test without peephole connections.
+python code/lstm_without_peephole.py
+#To test it with peephole connections.	
+python code/lstm_with_peephole_connections.py
 ```
 ##  
 ## TO-DO List:
 - [x] LSTM without peephole connections.
-- [ ] LSTM with peephole connections.
+- [x] LSTM with peephole connections.
 - [ ] Bidiectional  LSTM.
 - [ ] Performance Matrix.
 
