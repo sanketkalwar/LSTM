@@ -13,7 +13,7 @@ python code/lstm_with_peephole_connections.py
 ![ LSTM without Peephole connection ](Performance/lstm_without_peephole.png)
 ## Loss graph of LSTM with Peephole connection:
 ![ LSTM with Peephole connection ](Performance/lstm_with_peephole_connection.png)
-## TO-DO List:
+## Things Completed:
 - [x] LSTM without peephole connections.
 - [x] LSTM with peephole connections.
 - [ ] Bidiectional  LSTM.
