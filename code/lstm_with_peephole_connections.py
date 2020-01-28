@@ -1,5 +1,7 @@
 import numpy as np
+import matplotlib.pyplot as plt
 
+plt.ion()
 #load dataset 
 dataset = open('../data/input.txt','r').read()
 len_of_dataset = len(dataset)
@@ -21,6 +23,7 @@ time_steps = 25
 start_ptr = 0
 mean = 0.
 std = 0.01
+epoches = 10000
 
 Wi,Wf,Wz,Wo,Wout = np.random.normal(mean,std,(len_of_vocab,len_of_vocab)),\
 					np.random.normal(mean,std,(len_of_vocab,len_of_vocab)),\
@@ -203,11 +206,12 @@ def forward_backward_pass(input,output,h_prev,c_prev):
 
 
 
-
+x=[]
+y=[]
 n = 0
-smooth_loss = 1000
+smooth_loss = -np.log(1/len_of_vocab)*time_steps
 h_prev,c_prev = np.zeros((len_of_vocab,1)),np.zeros((len_of_vocab,1))
-while True:
+while n<=10000:
 	if start_ptr+time_steps > len_of_dataset:
 		start_ptr = 0
 		h_prev = np.zeros((len_of_vocab,1))
@@ -218,12 +222,18 @@ while True:
 																	(input=input,output=output,h_prev=h_prev,c_prev=c_prev)
 
 		smooth_loss = (0.999*smooth_loss)+(0.001*loss)
-		if n%1000==0:
+		x.append(n)
+		y.append(smooth_loss)
+		if n%epoches==0:
 			print('--------------------------------------------')
 			print('iter:',n)
 			print('smooth_loss:',smooth_loss)
 			sample(h_prev=h_prev,c_prev=c_prev,num_char=300)
 			print('--------------------------------------------')
+			plt.ylabel('Loss')
+			plt.xlabel('Epoch')
+			plt.plot(x,y,color='r')
+			plt.pause(1e-9)
 
 		for params,dparam,mparam in zip([Wi,Wf,Wz,Wo,Wout,Ri,Rf,Rz,Ro,Pi,Po,Pf,bi,bo,bf,bz,bout],\
 			[dWi,dWf,dWz,dWo,dWout,dRi,dRf,dRz,dRo,dPi,dPo,dPf,dbi,dbo,dbf,dbz,dbout],\
@@ -232,3 +242,5 @@ while True:
 			params += -lr*dparam/np.sqrt(mparam+1e-8)
 	n+=1
 	start_ptr += time_steps
+
+plt.savefig('../Performance/lstm_with_peephole_connection.png')

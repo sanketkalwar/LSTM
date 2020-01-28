@@ -21,6 +21,7 @@ lr = 1e-1
 time_step = 25
 mean =0.0
 std =0.01
+epoches = 10000
 
 def sigmoid(x):
     return 1/(1+np.exp(-x))
@@ -168,8 +169,8 @@ y_prev,c_prev = np.zeros((len_of_vocab,1)),np.zeros((len_of_vocab,1))
 n = 0
 x=[]
 y=[]
-smooth_loss = 200
-while True:
+smooth_loss = -np.log(1/len_of_vocab)*time_step
+while n<=epoches:
     if start_ptr+time_step>len_of_dataset:
         start_ptr = 0
         y_prev = np.zeros((len_of_vocab,1))
@@ -192,6 +193,8 @@ while True:
             plt.xlabel('Epoch')
             plt.plot(x,y,color='r')
             plt.pause(1e-9)
+            
 
     n+=1
     start_ptr += time_step
+plt.savefig('../Performance/lstm_without_peephole.png')
