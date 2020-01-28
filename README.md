@@ -9,9 +9,11 @@ python code/lstm_without_peephole.py
 #To test it with peephole connections.	
 python code/lstm_with_peephole_connections.py
 ```
-##Comparison of convergence:
-![LSTM without Peephole connection](Performance/lstm_without_peephole.png)
-## TO-DO List:
+## Loss graph of LSTM without Peephole connection:
+![ LSTM without Peephole connection ](Performance/lstm_without_peephole.png)
+## Loss graph of LSTM with Peephole connection:
+![ LSTM with Peephole connection ](Performance/lstm_with_peephole_connection.png)
+## Things Completed:
 - [x] LSTM without peephole connections.
 - [x] LSTM with peephole connections.
 - [ ] Bidiectional  LSTM.
