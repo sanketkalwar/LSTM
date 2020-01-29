@@ -4,12 +4,16 @@ from dataloader import idx_to_char,char_to_idx,dataset
 
 class LSTM(object):
 
-    def __init__(self,lr=1e-1,time_steps=25,len_of_vocab=25,mean=0.,std=0.01):
+    def __init__(self,lr=1e-1,time_steps=25,len_of_vocab=25,mean=0.,std=0.01,mode='lstm'):
+        self.input = None
+        self.output = None
         self.lr = lr
         self.time_steps = time_steps
         self.len_of_vocab = len_of_vocab
         self.mean = mean
         self.std = std
+        self.mode = mode
+        self.loss = 0
         self.Wi,self.Wf,self.Wz,self.Wo,self.Wout = np.random.normal(self.mean,self.std,(self.len_of_vocab,self.len_of_vocab)),\
                             np.random.normal(self.mean,self.std,(self.len_of_vocab,self.len_of_vocab)),\
                             np.random.normal(self.mean,self.std,(self.len_of_vocab,self.len_of_vocab)),\
@@ -21,7 +25,7 @@ class LSTM(object):
                         np.random.normal(self.mean,self.std,(self.len_of_vocab,self.len_of_vocab)),\
                         np.random.normal(self.mean,self.std,(self.len_of_vocab,self.len_of_vocab))
 
-        self.Pi,self.Pf,self.Po  = np.random.normal(self.mean,self.std,(self.len_of_vocab,1)),\
+        self.Pi,self.Pf,self.Po = np.random.normal(self.mean,self.std,(self.len_of_vocab,1)),\
                     np.random.normal(self.mean,self.std,(self.len_of_vocab,1)),\
                     np.random.normal(self.mean,self.std,(self.len_of_vocab,1))
 
@@ -63,6 +67,15 @@ class LSTM(object):
                             np.zeros((self.len_of_vocab,1)),\
                             np.zeros((self.len_of_vocab,1)),\
                             np.zeros((self.len_of_vocab,1))
+        
+        self.hs={}
+        self.cs={}
+        self.i_gate={}
+        self.f_gate={}
+        self.o_gate={}
+        self.z = {}
+        self.p = {}
+                            
     
     def zero_grad(self):
         self.dWi,self.dWf,self.dWz,self.dWo,self.dWout = np.zeros((self.len_of_vocab,self.len_of_vocab)),\
@@ -97,6 +110,11 @@ class LSTM(object):
             mparam += dparam*dparam
             params += -self.lr*dparam/np.sqrt(mparam+1e-8)
 
+    def set_input(self,input,output):
+        self.input = input
+        self.output = output
+
+    
     def sample(self,h_prev,c_prev,num_char):
         hs = np.copy(h_prev)
         cs = np.copy(c_prev)
@@ -132,44 +150,46 @@ class LSTM(object):
         print(''.join(idx_to_char[c] for c in idxs))
 
     #forward_backward_pass
-    def forward_backward_pass(self,input,output,h_prev,c_prev):
-        hs={}
-        cs={}
-        i_gate={}
-        f_gate={}
-        o_gate={}
-        z ={}
-        hs[-1] = np.copy(h_prev)
-        cs[-1] = np.copy(c_prev)
-        p = {}
-        loss = 0
+    def forward(self,h_prev,c_prev):
+        self.hs={}
+        self.cs={}
+        self.i_gate={}
+        self.f_gate={}
+        self.o_gate={}
+        self.z ={}
+        self.hs[-1] = np.copy(h_prev)
+        self.cs[-1] = np.copy(c_prev)
+        self.p = {}
+        self.loss = 0
         for t in range(self.time_steps):
             x = np.zeros((self.len_of_vocab,1))
-            x[input[t],0] = 1
+            x[self.input[t],0] = 1
 
-            I = np.dot(self.Wi,x) + np.dot(self.Ri,hs[t-1]) + self.Pi*cs[t-1] + self.bi
-            i_gate[t] = sigmoid(I)
+            I = np.dot(self.Wi,x) + np.dot(self.Ri,self.hs[t-1]) + self.Pi*self.cs[t-1] + self.bi
+            self.i_gate[t] = sigmoid(I)
 
-            F = np.dot(self.Wf,x) + np.dot(self.Rf,hs[t-1]) + self.Pf*cs[t-1] + self.bo
-            f_gate[t] = sigmoid(F)
+            F = np.dot(self.Wf,x) + np.dot(self.Rf,self.hs[t-1]) + self.Pf*self.cs[t-1] + self.bo
+            self.f_gate[t] = sigmoid(F)
 
-            Z = np.dot(self.Wz,x) + np.dot(self.Rz,hs[t-1]) + self.bz
-            z[t] = np.tanh(Z)
+            Z = np.dot(self.Wz,x) + np.dot(self.Rz,self.hs[t-1]) + self.bz
+            self.z[t] = np.tanh(Z)
 
-            cs[t] = i_gate[t]*z[t] + f_gate[t]*cs[t-1]
+            self.cs[t] = self.i_gate[t]*self.z[t] + self.f_gate[t]*self.cs[t-1]
 
-            O = np.dot(self.Wo,x) + np.dot(self.Ro,hs[t-1]) + self.Po*cs[t] +self.bo
-            o_gate[t] = sigmoid(O)
+            O = np.dot(self.Wo,x) + np.dot(self.Ro,self.hs[t-1]) + self.Po*self.cs[t] +self.bo
+            self.o_gate[t] = sigmoid(O)
 
-            hs[t] = o_gate[t] * np.tanh(cs[t])
+            self.hs[t] = self.o_gate[t] * np.tanh(self.cs[t])
 
-            out = np.dot(self.Wout,hs[t]) + self.bout
+            out = np.dot(self.Wout,self.hs[t]) + self.bout
+            
+            self.p[t] = softmax(out)
 
-            p[t] = softmax(out)
+            if self.mode == 'lstm':
+                self.loss += -np.log(self.p[t][self.output[t],0])
 
-            loss += -np.log(p[t][output[t],0])
-
-        #Backward pass
+    #Backward pass
+    def backward(self,bdout=None):
         dht_z = np.zeros((self.len_of_vocab,1))
         dht_f = np.zeros((self.len_of_vocab,1))
         dht_o = np.zeros((self.len_of_vocab,1))
@@ -180,51 +200,102 @@ class LSTM(object):
         dct_o = np.zeros((self.len_of_vocab,1))
         dct_i = np.zeros((self.len_of_vocab,1))
 
-        for t in reversed(range(self.time_steps)):
-            x = np.zeros((self.len_of_vocab,1))
-            x[input[t],0] = 1
 
-            dout = np.copy(p[t])
-            dout[output[t],0] -= 1
-            self.dWout += np.dot(dout,hs[t].T)
-            dht = np.dot(self.Wout.T,dout) + dht_z + dht_f + dht_o + dht_i
-            self.dbout += dout
-    
-            dog = np.tanh(cs[t])*dht
-            dog_ = o_gate[t]*(1-o_gate[t])*dog
-            self.dWo += np.dot(dog_,x.T)
-            self.dRo += np.dot(dog_,hs[t-1].T)
-            dht_o = np.dot(self.Ro.T,dog_)
-            self.dPo += cs[t]*dog_
-            dct_o = self.Po * dog_
-            self.dbo += dog_
+        if self.mode == 'lstm':
+            for t in reversed(range(self.time_steps)):
+                x = np.zeros((self.len_of_vocab,1))
+                x[self.input[t],0] = 1
+                
+                dout = np.copy(self.p[t])
+                dout[self.output[t],0] -= 1
+                self.dWout += np.dot(dout,self.hs[t].T)
+                dht = np.dot(self.Wout.T,dout) + dht_z + dht_f + dht_o + dht_i
+                self.dbout += dout
+            
+                dog = np.tanh(self.cs[t])*dht
+                dog_ = self.o_gate[t]*(1-self.o_gate[t])*dog
+                self.dWo += np.dot(dog_,x.T)
+                self.dRo += np.dot(dog_,self.hs[t-1].T)
+                dht_o = np.dot(self.Ro.T,dog_)
+                self.dPo += self.cs[t]*dog_
+                dct_o = self.Po * dog_
+                self.dbo += dog_
 
-            dct = (1-np.tanh(cs[t])*np.tanh(cs[t]))*o_gate[t]*dht + dct_cs + dct_f + dct_o + dct_i
-            dig = z[t] * dct
-            dz  = i_gate[t] * dct
-            dfg = cs[t-1] * dct
-            dct_cs = f_gate[t] * dct
+                dct = (1-np.tanh(self.cs[t])*np.tanh(self.cs[t]))*self.o_gate[t]*dht + dct_cs + dct_f + dct_o + dct_i
+                dig = self.z[t] * dct
+                dz  = self.i_gate[t] * dct
+                dfg = self.cs[t-1] * dct
+                dct_cs = self.f_gate[t] * dct
 
-            dz_ = (1-z[t]*z[t])*dz
-            self.dWz += np.dot(dz_,x.T)
-            self.dRz += np.dot(dz_,hs[t-1].T)
-            dht_z = np.dot(self.Rz.T,dz_)
-            self.dbz += dz_
+                dz_ = (1-self.z[t]*self.z[t])*dz
+                self.dWz += np.dot(dz_,x.T)
+                self.dRz += np.dot(dz_,self.hs[t-1].T)
+                dht_z = np.dot(self.Rz.T,dz_)
+                self.dbz += dz_
 
-            dfg_ = f_gate[t]*(1-f_gate[t])*dfg
-            self.dWf += np.dot(dfg_,x.T)
-            self.dRf += np.dot(dfg_,hs[t-1].T)
-            dht_f = np.dot(self.Rf.T,dfg_)
-            self.dPf += cs[t-1] * dfg_
-            dct_f  = self.Pf * dfg_
-            self.dbf += dfg_
+                dfg_ = self.f_gate[t]*(1-self.f_gate[t])*dfg
+                self.dWf += np.dot(dfg_,x.T)
+                self.dRf += np.dot(dfg_,self.hs[t-1].T)
+                dht_f = np.dot(self.Rf.T,dfg_)
+                self.dPf += self.cs[t-1] * dfg_
+                dct_f  = self.Pf * dfg_
+                self.dbf += dfg_
 
-            dig_ = i_gate[t]*(1-i_gate[t])*dig
-            self.dWi += np.dot(dig_,x.T)
-            self.dRi += np.dot(dig_,hs[t-1].T)
-            dht_i = np.dot(self.Ri.T,dig_)
-            self.dPi += cs[t-1]*dig_
-            dct_i = self.Pi * dig_
-            self.dbi += dig_
+                dig_ = self.i_gate[t]*(1-self.i_gate[t])*dig
+                self.dWi += np.dot(dig_,x.T)
+                self.dRi += np.dot(dig_,self.hs[t-1].T)
+                dht_i = np.dot(self.Ri.T,dig_)
+                self.dPi += self.cs[t-1]*dig_
+                dct_i = self.Pi * dig_
+                self.dbi += dig_
 
-        return loss,self.dWi,self.dWf,self.dWz,self.dWo,self.dWout,self.dRi,self.dRf,self.dRz,self.dRo,self.dPi,self.dPo,self.dPf,self.dbi,self.dbo,self.dbf,self.dbz,self.dbout,hs[self.time_steps-1],cs[self.time_steps-1]
+            return self.loss,self.dWi,self.dWf,self.dWz,self.dWo,self.dWout,self.dRi,self.dRf,self.dRz,self.dRo,self.dPi,self.dPo,self.dPf,self.dbi,self.dbo,self.dbf,self.dbz,self.dbout,self.hs[self.time_steps-1],self.cs[self.time_steps-1]
+        
+        if self.mode == 'blstm':
+            for t in reversed(range(self.time_steps)):
+                x = np.zeros((self.len_of_vocab,1))
+                x[self.input[t],0] = 1
+                
+                # dout = np.copy(self.p[t])
+                # dout[self.output[t],0] -= 1
+                self.dWout += np.dot(bdout[t],self.hs[t].T)
+                dht = np.dot(self.Wout.T,bdout[t]) + dht_z + dht_f + dht_o + dht_i
+            
+                dog = np.tanh(self.cs[t])*dht
+                dog_ = self.o_gate[t]*(1-self.o_gate[t])*dog
+                self.dWo += np.dot(dog_,x.T)
+                self.dRo += np.dot(dog_,self.hs[t-1].T)
+                dht_o = np.dot(self.Ro.T,dog_)
+                self.dPo += self.cs[t]*dog_
+                dct_o = self.Po * dog_
+                self.dbo += dog_
+
+                dct = (1-np.tanh(self.cs[t])*np.tanh(self.cs[t]))*self.o_gate[t]*dht + dct_cs + dct_f + dct_o + dct_i
+                dig = self.z[t] * dct
+                dz  = self.i_gate[t] * dct
+                dfg = self.cs[t-1] * dct
+                dct_cs = self.f_gate[t] * dct
+
+                dz_ = (1-self.z[t]*self.z[t])*dz
+                self.dWz += np.dot(dz_,x.T)
+                self.dRz += np.dot(dz_,self.hs[t-1].T)
+                dht_z = np.dot(self.Rz.T,dz_)
+                self.dbz += dz_
+
+                dfg_ = self.f_gate[t]*(1-self.f_gate[t])*dfg
+                self.dWf += np.dot(dfg_,x.T)
+                self.dRf += np.dot(dfg_,self.hs[t-1].T)
+                dht_f = np.dot(self.Rf.T,dfg_)
+                self.dPf += self.cs[t-1] * dfg_
+                dct_f  = self.Pf * dfg_
+                self.dbf += dfg_
+
+                dig_ = self.i_gate[t]*(1-self.i_gate[t])*dig
+                self.dWi += np.dot(dig_,x.T)
+                self.dRi += np.dot(dig_,self.hs[t-1].T)
+                dht_i = np.dot(self.Ri.T,dig_)
+                self.dPi += self.cs[t-1]*dig_
+                dct_i = self.Pi * dig_
+                self.dbi += dig_
+
+            return self.dWi,self.dWf,self.dWz,self.dWo,self.dWout,self.dRi,self.dRf,self.dRz,self.dRo,self.dPi,self.dPo,self.dPf,self.dbi,self.dbo,self.dbf,self.dbz,self.hs[self.time_steps-1],self.cs[self.time_steps-1]
