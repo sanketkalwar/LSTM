@@ -73,7 +73,7 @@ def sample(h_prev,c_prev,num_char):
 		I = np.dot(Wi,x) + np.dot(Ri,hs) + Pi*cs + bi
 		i_gate = sigmoid(I)
 
-		F = np.dot(Wf,x) + np.dot(Rf,hs) + Pf*cs + bo
+		F = np.dot(Wf,x) + np.dot(Rf,hs) + Pf*cs + bf
 		f_gate = sigmoid(F)
 
 		Z = np.dot(Wz,x) + np.dot(Rz,hs) + bz
@@ -115,7 +115,7 @@ def forward_backward_pass(input,output,h_prev,c_prev):
 		I = np.dot(Wi,x) + np.dot(Ri,hs[t-1]) + Pi*cs[t-1] + bi
 		i_gate[t] = sigmoid(I)
 
-		F = np.dot(Wf,x) + np.dot(Rf,hs[t-1]) + Pf*cs[t-1] + bo
+		F = np.dot(Wf,x) + np.dot(Rf,hs[t-1]) + Pf*cs[t-1] + bf
 		f_gate[t] = sigmoid(F)
 
 		Z = np.dot(Wz,x) + np.dot(Rz,hs[t-1]) + bz

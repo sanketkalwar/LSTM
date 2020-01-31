@@ -139,7 +139,11 @@ class LSTM(object):
 
             hs = o_gate * np.tanh(cs)
 
-            out = np.dot(self.Wout,hs) + self.bout
+            if self.mode == 'lstm':
+                out = np.dot(self.Wout,hs) + self.bout
+            
+            if self.mode == 'blstm':
+                out = np.dot(self.Wout,hs)
 
             p = softmax(out)
             idx = np.random.choice(self.len_of_vocab,1,p=p.ravel())[0]
@@ -168,7 +172,7 @@ class LSTM(object):
             I = np.dot(self.Wi,x) + np.dot(self.Ri,self.hs[t-1]) + self.Pi*self.cs[t-1] + self.bi
             self.i_gate[t] = sigmoid(I)
 
-            F = np.dot(self.Wf,x) + np.dot(self.Rf,self.hs[t-1]) + self.Pf*self.cs[t-1] + self.bo
+            F = np.dot(self.Wf,x) + np.dot(self.Rf,self.hs[t-1]) + self.Pf*self.cs[t-1] + self.bf
             self.f_gate[t] = sigmoid(F)
 
             Z = np.dot(self.Wz,x) + np.dot(self.Rz,self.hs[t-1]) + self.bz
@@ -181,12 +185,11 @@ class LSTM(object):
 
             self.hs[t] = self.o_gate[t] * np.tanh(self.cs[t])
 
-            out = np.dot(self.Wout,self.hs[t]) + self.bout
-            
-            self.p[t] = softmax(out)
-
             if self.mode == 'lstm':
+                out = np.dot(self.Wout,self.hs[t]) + self.bout
+                self.p[t] = softmax(out)
                 self.loss += -np.log(self.p[t][self.output[t],0])
+                
 
     #Backward pass
     def backward(self,bdout=None):
@@ -256,8 +259,6 @@ class LSTM(object):
                 x = np.zeros((self.len_of_vocab,1))
                 x[self.input[t],0] = 1
                 
-                # dout = np.copy(self.p[t])
-                # dout[self.output[t],0] -= 1
                 self.dWout += np.dot(bdout[t],self.hs[t].T)
                 dht = np.dot(self.Wout.T,bdout[t]) + dht_z + dht_f + dht_o + dht_i
             

@@ -19,6 +19,7 @@ y=[]
 n = 0
 
 bout = np.zeros((len_of_vocab,1))
+mbout = np.zeros_like(bout)
 
 lstm_layer1 = LSTM(lr=lr,time_steps=time_steps,len_of_vocab=len_of_vocab,mean=mean,std=std,mode='blstm')
 lstm_layer2 = LSTM(lr=lr,time_steps=time_steps,len_of_vocab=len_of_vocab,mean=mean,std=std,mode='blstm')
@@ -33,7 +34,6 @@ mRi2,mRf2,mRz2,mRo2 = np.zeros_like(lstm_layer2.Ri),np.zeros_like(lstm_layer2.Rf
 mPi2,mPo2,mPf2 = np.zeros_like(lstm_layer2.Pi),np.zeros_like(lstm_layer2.Po),np.zeros_like(lstm_layer2.Pf)
 mbi2,mbo2,mbf2,mbz2 = np.zeros_like(lstm_layer2.bi),np.zeros_like(lstm_layer2.bo),np.zeros_like(lstm_layer2.bf),np.zeros_like(lstm_layer2.bz)
 
-mbout = np.zeros_like(bout)
 
 mparams_of_lstm = [mWi1,mWf1,mWz1,mWo1,mWout1,mRi1,mRf1,mRz1,mRo1,mPi1,mPo1,mPf1,mbi1,mbo1,mbf1,mbz1,\
                     mWi2,mWf2,mWz2,mWo2,mWout2,mRi2,mRf2,mRz2,mRo2,mPi2,mPo2,mPf2,mbi2,mbo2,mbf2,mbz2,mbout]
@@ -43,11 +43,11 @@ h_prev1,c_prev1 = np.zeros((len_of_vocab,1)),np.zeros((len_of_vocab,1))
 h_prev2,c_prev2 = np.zeros((len_of_vocab,1)),np.zeros((len_of_vocab,1))
 
 
-def blstm_forward_backward(h1,w1,h2,w2,output):
+def blstm_backward(h1,w1,h2,w2,output):
     p={}
     dout = {}
     loss = 0
-    for t in range(time_steps):
+    for t in reversed(range(time_steps)):
         out = np.dot(w1,h1[t])+np.dot(w2,h2[time_steps-t-1])+bout
         p[t]=softmax(out)
         loss += -np.log(p[t][output[t],0])
@@ -67,7 +67,7 @@ def forward(h_p,c_p,num_char,lstm,x):
     cs = np.copy(c_p)
     I = np.dot(lstm.Wi,x) + np.dot(lstm.Ri,hs) + lstm.Pi*cs + lstm.bi
     i_gate = sigmoid(I)
-    F = np.dot(lstm.Wf,x) + np.dot(lstm.Rf,hs) + lstm.Pf*cs + lstm.bo
+    F = np.dot(lstm.Wf,x) + np.dot(lstm.Rf,hs) + lstm.Pf*cs + lstm.bf
     f_gate = sigmoid(F)
     Z = np.dot(lstm.Wz,x) + np.dot(lstm.Rz,hs) + lstm.bz
     z = np.tanh(Z)
@@ -119,11 +119,11 @@ while n<=epoches:
         lstm_layer2.set_input(input=input[::-1],output=output[::-1])
         lstm_layer2.forward(h_prev=h_prev2,c_prev=c_prev2)
 
-        loss,dout,dbout=blstm_forward_backward(h1=lstm_layer1.hs,w1=lstm_layer1.Wout,h2=lstm_layer2.hs,w2=lstm_layer2.Wout,output=output)
+        loss,dout,dbout=blstm_backward(h1=lstm_layer1.hs,w1=lstm_layer1.Wout,h2=lstm_layer2.hs,w2=lstm_layer2.Wout,output=output)
 
         do = [v for v in dout.values()]
         dWi1,dWf1,dWz1,dWo1,dWout1,dRi1,dRf1,dRz1,dRo1,dPi1,dPo1,dPf1,dbi1,dbo1,dbf1,dbz1,h_prev1,c_prev1=lstm_layer1.backward(bdout=do)
-        dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,h_prev2,c_prev2=lstm_layer2.backward(bdout=do)
+        dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,h_prev2,c_prev2=lstm_layer2.backward(bdout=do[::-1])
         for dparam in[dWi1,dWf1,dWz1,dWo1,dWout1,dRi1,dRf1,dRz1,dRo1,dPi1,dPo1,dPf1,dbi1,dbo1,dbf1,dbz1,\
             dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,dbout] :
             np.clip(dparam,-1,1,out=dparam)
@@ -156,4 +156,4 @@ while n<=epoches:
 
     start_ptr += time_steps
     n+=1
-plt.savefig('../../Performance/test.png')
+plt.savefig('../../Performance/blstm.png')
