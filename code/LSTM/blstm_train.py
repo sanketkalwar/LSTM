@@ -123,7 +123,7 @@ while n<=epoches:
 
         do = [v for v in dout.values()]
         dWi1,dWf1,dWz1,dWo1,dWout1,dRi1,dRf1,dRz1,dRo1,dPi1,dPo1,dPf1,dbi1,dbo1,dbf1,dbz1,h_prev1,c_prev1=lstm_layer1.backward(bdout=do)
-        dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,h_prev2,c_prev2=lstm_layer2.backward(bdout=do[::-1])
+        dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,h_prev2,c_prev2=lstm_layer2.backward(bdout=do)
         for dparam in[dWi1,dWf1,dWz1,dWo1,dWout1,dRi1,dRf1,dRz1,dRo1,dPi1,dPo1,dPf1,dbi1,dbo1,dbf1,dbz1,\
             dWi2,dWf2,dWz2,dWo2,dWout2,dRi2,dRf2,dRz2,dRo2,dPi2,dPo2,dPf2,dbi2,dbo2,dbf2,dbz2,dbout] :
             np.clip(dparam,-1,1,out=dparam)
