@@ -5,9 +5,11 @@ The task is to predict next character in the sequence using sequential model lik
 ## How to run the code:
 ```
 #To test without peephole connections.
-python code/lstm_without_peephole.py
+python3 code/lstm_without_peephole.py
 #To test it with peephole connections.	
-python code/lstm_with_peephole_connections.py
+python3 code/lstm_with_peephole_connections.py
+#To test Bi-directional LSTM.	
+python3 code/LSTM/blstm_train.py
 ```
 ## Loss graph of LSTM without Peephole connection:
 ![ LSTM without Peephole connection ](Performance/lstm_without_peephole.png)
@@ -19,7 +21,10 @@ python code/lstm_with_peephole_connections.py
 - [x] LSTM without peephole connections.
 - [x] LSTM with peephole connections.
 - [x] Bidiectional  LSTM.
-- [ ] Performance Matrix.
+- [ ] Nested LSTM.
+- [ ] GRU Unit.
+- [ ] Support for custom loss Function.
+
 
 
  
